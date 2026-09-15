@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: envio-indexer
+disable_default_cross_chain: true
+chains:
+- id: 10143
+  start_block: 0
+  contracts:
+  - name: CustosCore
+    address:
+    - "0xCfBbd07b107A6cb7e685e555E4C9ef956d11a0bB"
+    events:
+    - event: AgentAllowanceChanged(bytes32 indexed id, uint128 oldAllowance, uint128 newAllowance)
+    - event: AgentPeriodChanged(bytes32 indexed id, uint32 oldPeriodLength, uint32 newPeriodLength)
+    - event: AgentPublicChanged(bytes32 indexed id, bool isPublic)
+    - event: AgentRegistered(bytes32 indexed id, address indexed creator, address indexed wallet, address vault, bytes32 name, string description, uint128 allowance, uint32 periodLength, uint16 feeRate, bool isPublic)
+    - event: AgentStatusChanged(bytes32 indexed id, uint8 oldStatus, uint8 newStatus)
+    - event: AuroraReceiverChanged(address indexed oldReceiver, address indexed newReceiver)
+    - event: Initialized(uint64 version)
+    - event: MarketAdapterChanged(address indexed oldAdapter, address indexed newAdapter)
+    - event: MarketAllowedChanged(address indexed market, bool allowed)
+    - event: MinSeedChanged(uint128 oldMinSeed, uint128 newMinSeed)
+    - event: PausedChanged(bool paused)
+    - event: Upgraded(address indexed implementation)
+  - name: NansenModule
+    address:
+    - "0xF7E5618cA647B23916d366B9d1E24727D95Aa24A"
+    events:
+    - event: AttestorChanged(address oldAttestor, address newAttestor)
+    - event: Initialized(uint64 version)
+    - event: NansenAttestationSubmitted(bytes32 indexed agentId, bytes32 attestHash, uint64 timestamp)
+    - event: Upgraded(address indexed implementation)
+  - name: AgentVault
+    # No fixed address — one AgentVault is deployed per agent via
+    # CustosCore.registerAgent, so there's no single address to list. Instances
+    # are registered dynamically from CustosCore's AgentRegistered event; see
+    # the indexer.contractRegister call in src/handlers/CustosCore.ts.
+    events:
+    - event: SwapExecuted(address indexed vault, bytes32 indexed agentId, address indexed market, bool isBuy, uint128 baseAmount, uint128 quoteAmount, uint128 notionalCharged, uint256 newTotalAssets, uint256 newSharePrice)
+    - event: SubscriberDeposited(address indexed vault, address indexed subscriber, uint256 assets, uint256 shares)
+    - event: SubscriberRedeemed(address indexed vault, address indexed subscriber, uint256 assets, uint256 shares)
+    - event: SeedDeposited(address indexed vault, address indexed creator, uint256 assets, uint256 shares, address deadAddress)
+    - event: FeeMinted(address indexed vault, address indexed creator, uint256 feeShares, uint256 feeAssets, uint256 newHighWaterMark)
+    - event: CircuitBreakerTriggered(address indexed vault, uint256 currentSharePrice, uint256 highWaterMark, uint16 maxDrawdownBps)
+    - event: Transfer(address indexed from, address indexed to, uint256 value)

@@ -1,0 +1,201 @@
+type CustosCore_AgentAllowanceChanged {
+  id: ID!
+  event_id: String!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  oldAllowance: BigInt!
+  newAllowance: BigInt!
+}
+
+type CustosCore_AgentPeriodChanged {
+  id: ID!
+  event_id: String!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  oldPeriodLength: BigInt!
+  newPeriodLength: BigInt!
+}
+
+type CustosCore_AgentPublicChanged {
+  id: ID!
+  event_id: String!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  isPublic: Boolean!
+}
+
+type CustosCore_AgentRegistered {
+  id: ID!
+  event_id: String!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  creator: String!
+  wallet: String!
+  vault: String!
+  name: String!
+  description: String!
+  allowance: BigInt!
+  periodLength: BigInt!
+  feeRate: BigInt!
+  isPublic: Boolean!
+}
+
+type CustosCore_AgentStatusChanged {
+  id: ID!
+  event_id: String!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  oldStatus: BigInt!
+  newStatus: BigInt!
+}
+
+type CustosCore_AuroraReceiverChanged {
+  id: ID!
+  oldReceiver: String!
+  newReceiver: String!
+}
+
+type CustosCore_Initialized {
+  id: ID!
+  version: BigInt!
+}
+
+type CustosCore_MarketAdapterChanged {
+  id: ID!
+  oldAdapter: String!
+  newAdapter: String!
+}
+
+type CustosCore_MarketAllowedChanged {
+  id: ID!
+  market: String!
+  allowed: Boolean!
+}
+
+type CustosCore_MinSeedChanged {
+  id: ID!
+  oldMinSeed: BigInt!
+  newMinSeed: BigInt!
+}
+
+type CustosCore_PausedChanged {
+  id: ID!
+  paused: Boolean!
+}
+
+type CustosCore_Upgraded {
+  id: ID!
+  implementation: String!
+}
+
+type NansenModule_AttestorChanged {
+  id: ID!
+  oldAttestor: String!
+  newAttestor: String!
+}
+
+type NansenModule_Initialized {
+  id: ID!
+  version: BigInt!
+}
+
+type NansenModule_NansenAttestationSubmitted {
+  id: ID!
+  agentId: String!
+  attestHash: String!
+  timestamp: BigInt!
+}
+
+type NansenModule_Upgraded {
+  id: ID!
+  implementation: String!
+}
+
+type AgentVault_SwapExecuted {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  vault: String!
+  agentId: String!
+  market: String!
+  isBuy: Boolean!
+  baseAmount: BigInt!
+  quoteAmount: BigInt!
+  notionalCharged: BigInt!
+  newTotalAssets: BigInt!
+  newSharePrice: BigInt!
+}
+
+type AgentVault_SubscriberDeposited {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  vault: String!
+  subscriber: String!
+  assets: BigInt!
+  shares: BigInt!
+}
+
+type AgentVault_SubscriberRedeemed {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  vault: String!
+  subscriber: String!
+  assets: BigInt!
+  shares: BigInt!
+}
+
+type AgentVault_SeedDeposited {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  vault: String!
+  creator: String!
+  assets: BigInt!
+  shares: BigInt!
+  deadAddress: String!
+}
+
+type AgentVault_FeeMinted {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  vault: String!
+  creator: String!
+  feeShares: BigInt!
+  feeAssets: BigInt!
+  newHighWaterMark: BigInt!
+}
+
+type AgentVault_CircuitBreakerTriggered {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  vault: String!
+  currentSharePrice: BigInt!
+  highWaterMark: BigInt!
+  maxDrawdownBps: BigInt!
+}
+
+type AgentVault_Transfer {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  from: String!
+  to: String!
+  value: BigInt!
+}
+
