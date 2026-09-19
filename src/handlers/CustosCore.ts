@@ -2,6 +2,7 @@
  * Please refer to https://docs.envio.dev for a thorough guide on all Envio indexer features
  */
 import { indexer } from "envio";
+import { ONE, agentKey, vaultKey } from "./derived";
 import type {
   CustosCore_AgentAllowanceChanged,
   CustosCore_AgentPeriodChanged,
@@ -31,6 +32,9 @@ indexer.onEvent(
     };
 
     context.CustosCore_AgentAllowanceChanged.set(entity);
+
+    const agent = await context.Agent.get(agentKey(event.params.id));
+    if (agent) context.Agent.set({ ...agent, allowance: event.params.newAllowance });
   },
 );
 
@@ -48,6 +52,9 @@ indexer.onEvent(
     };
 
     context.CustosCore_AgentPeriodChanged.set(entity);
+
+    const agent = await context.Agent.get(agentKey(event.params.id));
+    if (agent) context.Agent.set({ ...agent, periodLength: event.params.newPeriodLength });
   },
 );
 
@@ -64,6 +71,9 @@ indexer.onEvent(
     };
 
     context.CustosCore_AgentPublicChanged.set(entity);
+
+    const agent = await context.Agent.get(agentKey(event.params.id));
+    if (agent) context.Agent.set({ ...agent, isPublic: event.params.isPublic });
   },
 );
 
@@ -96,6 +106,27 @@ indexer.onEvent(
     };
 
     context.CustosCore_AgentRegistered.set(entity);
+
+    const id = agentKey(event.params.id);
+    context.Agent.set({
+      id,
+      creator: event.params.creator,
+      wallet: event.params.wallet,
+      vault: event.params.vault,
+      name: event.params.name,
+      description: event.params.description,
+      allowance: event.params.allowance,
+      periodLength: event.params.periodLength,
+      feeRate: event.params.feeRate,
+      isPublic: event.params.isPublic,
+      status: 1,
+      registeredAt: event.block.timestamp,
+      sharePrice: ONE,
+      lastPriceAt: event.block.timestamp,
+      swapCount: 0,
+      volume: 0n,
+    });
+    context.VaultRef.set({ id: vaultKey(event.params.vault), agent: id });
   },
 );
 
@@ -113,6 +144,9 @@ indexer.onEvent(
     };
 
     context.CustosCore_AgentStatusChanged.set(entity);
+
+    const agent = await context.Agent.get(agentKey(event.params.id));
+    if (agent) context.Agent.set({ ...agent, status: Number(event.params.newStatus) });
   },
 );
 

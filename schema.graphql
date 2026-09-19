@@ -199,3 +199,53 @@ type AgentVault_Transfer {
   value: BigInt!
 }
 
+
+# ---------------------------------------------------------------------------
+# Derived entities (one row per agent, one row per price observation) — what
+# the marketplace reads. The raw per-event entities above stay as the audit log.
+# ---------------------------------------------------------------------------
+
+# id = agentId (lowercased). Entities are per-chain in envio (it adds and
+# scopes `chainId` itself), so the same agentId on testnet and mainnet never collide.
+type Agent {
+  id: ID!
+  creator: String! @index
+  wallet: String!
+  vault: String! @index
+  name: String!
+  description: String!
+  allowance: BigInt!
+  periodLength: BigInt!
+  feeRate: BigInt!
+  isPublic: Boolean!
+  # Mirrors Types.Status: 1 Active, 2 Paused, 3 Revoked. CircuitBreakerTriggered
+  # sets 2 without a registry event, so this is the union of both sources.
+  status: Int!
+  registeredAt: Int!
+  # Last observed share price, 1e18-scaled, and when.
+  sharePrice: BigInt!
+  lastPriceAt: Int!
+  swapCount: Int!
+  # Sum of notionalCharged over every swap, in USDC units.
+  volume: BigInt!
+}
+
+# id = `${chainId}_${blockNumber}_${logIndex}`; one per event that reports a
+# share price (SeedDeposited at 1e18, SwapExecuted, CircuitBreakerTriggered).
+type SharePricePoint {
+  id: ID!
+  agent: String! @index
+  timestamp: Int!
+  sharePrice: BigInt!
+  totalAssets: BigInt!
+  # notionalCharged for a swap point, 0 otherwise — lets a 30d volume be summed client-side.
+  notional: BigInt!
+  source: String!
+}
+
+# Vault events other than SwapExecuted carry only the vault address.
+# id = vault address (lowercased) -> Agent.id.
+type VaultRef {
+  id: ID!
+  agent: String!
+}

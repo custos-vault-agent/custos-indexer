@@ -6,6 +6,7 @@
  * indexer.contractRegister call in CustosCore.ts.
  */
 import { indexer } from "envio";
+import { ONE, agentByVault, agentKey, recordPrice } from "./derived";
 import type {
   AgentVault_CircuitBreakerTriggered,
   AgentVault_FeeMinted,
@@ -36,6 +37,23 @@ indexer.onEvent(
     };
 
     context.AgentVault_SwapExecuted.set(entity);
+
+    const agent = await context.Agent.get(agentKey(event.params.agentId));
+    if (agent) {
+      const updated = recordPrice(context, agent, {
+        id: entity.id,
+        timestamp: event.block.timestamp,
+        sharePrice: event.params.newSharePrice,
+        totalAssets: event.params.newTotalAssets,
+        notional: event.params.notionalCharged,
+        source: "swap",
+      });
+      context.Agent.set({
+        ...updated,
+        swapCount: agent.swapCount + 1,
+        volume: agent.volume + event.params.notionalCharged,
+      });
+    }
   },
 );
 
@@ -91,6 +109,20 @@ indexer.onEvent(
     };
 
     context.AgentVault_SeedDeposited.set(entity);
+
+    const agent = await agentByVault(context, event.params.vault);
+    if (agent) {
+      context.Agent.set(
+        recordPrice(context, agent, {
+          id: entity.id,
+          timestamp: event.block.timestamp,
+          sharePrice: ONE,
+          totalAssets: event.params.assets,
+          notional: 0n,
+          source: "seed",
+        }),
+      );
+    }
   },
 );
 
@@ -128,6 +160,22 @@ indexer.onEvent(
     };
 
     context.AgentVault_CircuitBreakerTriggered.set(entity);
+
+    const agent = await agentByVault(context, event.params.vault);
+    if (agent) {
+      // The vault pauses itself here with no registry event; mirror it.
+      context.Agent.set({
+        ...recordPrice(context, agent, {
+          id: entity.id,
+          timestamp: event.block.timestamp,
+          sharePrice: event.params.currentSharePrice,
+          totalAssets: 0n,
+          notional: 0n,
+          source: "breaker",
+        }),
+        status: 2,
+      });
+    }
   },
 );
 
