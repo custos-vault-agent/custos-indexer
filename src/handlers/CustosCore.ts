@@ -107,6 +107,10 @@ indexer.onEvent(
 
     context.CustosCore_AgentRegistered.set(entity);
 
+    // A creator attested before registering carries the attestation onto the new agent.
+    const attested = (await context.NanSigil_AttestationSubmitted.getWhere({ wallet: { _eq: event.params.creator } }))
+      .sort((a, b) => Number(b.timestamp - a.timestamp))[0];
+
     const id = agentKey(event.params.id);
     context.Agent.set({
       id,
@@ -125,10 +129,10 @@ indexer.onEvent(
       lastPriceAt: event.block.timestamp,
       swapCount: 0,
       volume: 0n,
-      nansenLabel: undefined,
-      nansenPnl: undefined,
-      nansenWinRate: undefined,
-      nansenAttestedAt: undefined,
+      nansenLabel: attested?.label,
+      nansenPnl: attested?.pnl,
+      nansenWinRate: attested?.winRate,
+      nansenAttestedAt: attested ? Number(attested.timestamp) : undefined,
     });
     context.VaultRef.set({ id: vaultKey(event.params.vault), agent: id });
   },

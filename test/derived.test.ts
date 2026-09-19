@@ -1,7 +1,7 @@
 import { createTestIndexer } from "envio";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, test } from "vitest";
 
-const CORE = "0xCfBbd07b107A6cb7e685e555E4C9ef956d11a0bB";
+const CORE = "0xCfBbd07b107A6cb7e685e555E4C9ef956d11a0bB" as const;
 const VAULT = "0x1111111111111111111111111111111111111111";
 const AGENT_ID = "0x" + "ab".repeat(32);
 const ONE = 10n ** 18n;
@@ -88,5 +88,47 @@ describe("derived Agent / SharePricePoint", () => {
       .sort((a, b) => a.timestamp - b.timestamp);
     expect(points.map((p) => p.source)).toEqual(["seed", "swap", "breaker"]);
     expect(points.map((p) => p.sharePrice)).toEqual([ONE, (ONE * 11n) / 10n, (ONE * 8n) / 10n]);
+  });
+});
+
+describe("NanSigil attestation → Agent", () => {
+  const SIGIL = "0x2222222222222222222222222222222222222222" as const;
+  const CREATOR = hex("c1", 20);
+  const register = (id: `0x${string}`, wallet: `0x${string}`, vault: `0x${string}`, block: number) =>
+    ({
+      contract: "CustosCore" as const,
+      event: "AgentRegistered" as const,
+      srcAddress: CORE,
+      block: { number: block, timestamp: block * 1000 },
+      params: {
+        id, creator: CREATOR, wallet, vault, name: hex("00", 32), description: "",
+        allowance: 1n, periodLength: 0n, feeRate: 0n, isPublic: true,
+      },
+    });
+
+  test("fans out to existing agents and pre-fills later ones", async () => {
+    const ti = createTestIndexer();
+    const A = hex("aa", 32), B = hex("bb", 32);
+    await ti.process({
+      chains: {
+        10143: {
+          simulate: [
+            register(A, hex("a1", 20), hex("11", 20), 1),
+            {
+              contract: "NanSigil",
+              event: "AttestationSubmitted",
+              srcAddress: SIGIL,
+              block: { number: 2, timestamp: 2000 },
+              params: { wallet: CREATOR, label: "Fund", pnl: 90_000n, winRate: 65n, timestamp: 1999n, attestHash: hex("ff", 32) },
+            },
+            register(B, hex("b1", 20), hex("12", 20), 3), // same creator, registered after the attestation
+          ],
+        },
+      },
+    });
+    const a = await ti.Agent.getOrThrow(A.toLowerCase());
+    const b = await ti.Agent.getOrThrow(B.toLowerCase());
+    expect([a.nansenLabel, a.nansenWinRate, a.nansenAttestedAt]).toEqual(["Fund", 65, 1999]);
+    expect([b.nansenLabel, b.nansenPnl]).toEqual(["Fund", 90_000n]);
   });
 });

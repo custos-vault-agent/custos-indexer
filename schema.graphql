@@ -93,21 +93,15 @@ type CustosCore_Upgraded {
   implementation: String!
 }
 
-type NansenModule_AttestorChanged {
+type NanSigil_AttestorChanged {
   id: ID!
   oldAttestor: String!
   newAttestor: String!
 }
 
-type NansenModule_Initialized {
+type NanSigil_AttestationSubmitted {
   id: ID!
-  version: BigInt!
-}
-
-type NansenModule_NansenAttestationSubmitted {
-  id: ID!
-  agentId: String!
-  wallet: String!
+  wallet: String! @index
   label: String!
   pnl: BigInt!
   winRate: Int!
@@ -115,7 +109,7 @@ type NansenModule_NansenAttestationSubmitted {
   attestHash: String!
 }
 
-type NansenModule_Upgraded {
+type NanSigil_Upgraded {
   id: ID!
   implementation: String!
 }
@@ -232,8 +226,8 @@ type Agent {
   swapCount: Int!
   # Sum of notionalCharged over every swap, in USDC units.
   volume: BigInt!
-  # Latest Nansen attestation plaintext (event carries it), enough to call
-  # verifyAttestation on-chain. Null until the first submission.
+  # Latest NanSigil attestation of the creator wallet (the event carries the
+  # plaintext), enough to call NanSigil.verify. Null until the first submission.
   nansenLabel: String
   nansenPnl: BigInt
   nansenWinRate: Int

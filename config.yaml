@@ -17,11 +17,11 @@ contracts:
   - event: MinSeedChanged(uint128 oldMinSeed, uint128 newMinSeed)
   - event: PausedChanged(bool paused)
   - event: Upgraded(address indexed implementation)
-- name: NansenModule
+# NanSigil (repo nansigil-contract): wallet-keyed reputation attestations.
+- name: NanSigil
   events:
-  - event: AttestorChanged(address oldAttestor, address newAttestor)
-  - event: Initialized(uint64 version)
-  - event: NansenAttestationSubmitted(bytes32 indexed agentId, address indexed wallet, string label, int256 pnl, uint16 winRate, uint64 timestamp, bytes32 attestHash)
+  - event: AttestorChanged(address indexed oldAttestor, address indexed newAttestor)
+  - event: AttestationSubmitted(address indexed wallet, string label, int256 pnl, uint16 winRate, uint64 timestamp, bytes32 attestHash)
   - event: Upgraded(address indexed implementation)
 - name: AgentVault
   # No fixed address — one AgentVault is deployed per agent via
@@ -45,9 +45,11 @@ chains:
   - name: CustosCore
     address:
     - "0xCfBbd07b107A6cb7e685e555E4C9ef956d11a0bB"
-  - name: NansenModule
+  - name: NanSigil
+    # TODO: placeholder until NanSigil is deployed on testnet; replace with .nansigil
+    # from deployments/*.json. Also what test/derived.test.ts simulates against.
     address:
-    - "0xF7E5618cA647B23916d366B9d1E24727D95Aa24A"
+    - "0x2222222222222222222222222222222222222222"
   - name: AgentVault # registered dynamically from AgentRegistered
 
 # Monad mainnet
@@ -57,6 +59,6 @@ chains:
   - name: CustosCore
     # TODO: fill from deployments/monad-mainnet.json after `make deployCore`
     address: []
-  - name: NansenModule
+  - name: NanSigil
     address: []
   - name: AgentVault
