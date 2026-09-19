@@ -10,7 +10,6 @@ contracts:
   - event: AgentPublicChanged(bytes32 indexed id, bool isPublic)
   - event: AgentRegistered(bytes32 indexed id, address indexed creator, address indexed wallet, address vault, bytes32 name, string description, uint128 allowance, uint32 periodLength, uint16 feeRate, bool isPublic)
   - event: AgentStatusChanged(bytes32 indexed id, uint8 oldStatus, uint8 newStatus)
-  - event: AuroraReceiverChanged(address indexed oldReceiver, address indexed newReceiver)
   - event: Initialized(uint64 version)
   - event: MarketAdapterChanged(address indexed oldAdapter, address indexed newAdapter)
   - event: MarketAllowedChanged(address indexed market, bool allowed)

@@ -9,7 +9,6 @@ import type {
   CustosCore_AgentPublicChanged,
   CustosCore_AgentRegistered,
   CustosCore_AgentStatusChanged,
-  CustosCore_AuroraReceiverChanged,
   CustosCore_Initialized,
   CustosCore_MarketAdapterChanged,
   CustosCore_MarketAllowedChanged,
@@ -157,16 +156,6 @@ indexer.onEvent(
     if (agent) context.Agent.set({ ...agent, status: Number(event.params.newStatus) });
   },
 );
-
-indexer.onEvent({ contract: "CustosCore", event: "AuroraReceiverChanged" }, async ({ event, context }) => {
-  const entity: CustosCore_AuroraReceiverChanged = {
-    id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
-    oldReceiver: event.params.oldReceiver,
-    newReceiver: event.params.newReceiver,
-  };
-
-  context.CustosCore_AuroraReceiverChanged.set(entity);
-});
 
 indexer.onEvent({ contract: "CustosCore", event: "Initialized" }, async ({ event, context }) => {
   const entity: CustosCore_Initialized = {

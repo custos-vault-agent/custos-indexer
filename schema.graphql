@@ -54,12 +54,6 @@ type CustosCore_AgentStatusChanged {
   newStatus: BigInt!
 }
 
-type CustosCore_AuroraReceiverChanged {
-  id: ID!
-  oldReceiver: String!
-  newReceiver: String!
-}
-
 type CustosCore_Initialized {
   id: ID!
   version: BigInt!
