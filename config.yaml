@@ -21,7 +21,7 @@ contracts:
   events:
   - event: AttestorChanged(address oldAttestor, address newAttestor)
   - event: Initialized(uint64 version)
-  - event: NansenAttestationSubmitted(bytes32 indexed agentId, bytes32 attestHash, uint64 timestamp)
+  - event: NansenAttestationSubmitted(bytes32 indexed agentId, address indexed wallet, string label, int256 pnl, uint16 winRate, uint64 timestamp, bytes32 attestHash)
   - event: Upgraded(address indexed implementation)
 - name: AgentVault
   # No fixed address — one AgentVault is deployed per agent via

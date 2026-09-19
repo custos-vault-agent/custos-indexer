@@ -107,8 +107,12 @@ type NansenModule_Initialized {
 type NansenModule_NansenAttestationSubmitted {
   id: ID!
   agentId: String!
-  attestHash: String!
+  wallet: String!
+  label: String!
+  pnl: BigInt!
+  winRate: Int!
   timestamp: BigInt!
+  attestHash: String!
 }
 
 type NansenModule_Upgraded {
@@ -228,6 +232,12 @@ type Agent {
   swapCount: Int!
   # Sum of notionalCharged over every swap, in USDC units.
   volume: BigInt!
+  # Latest Nansen attestation plaintext (event carries it), enough to call
+  # verifyAttestation on-chain. Null until the first submission.
+  nansenLabel: String
+  nansenPnl: BigInt
+  nansenWinRate: Int
+  nansenAttestedAt: Int
 }
 
 # id = `${chainId}_${blockNumber}_${logIndex}`; one per event that reports a

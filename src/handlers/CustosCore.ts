@@ -125,6 +125,10 @@ indexer.onEvent(
       lastPriceAt: event.block.timestamp,
       swapCount: 0,
       volume: 0n,
+      nansenLabel: undefined,
+      nansenPnl: undefined,
+      nansenWinRate: undefined,
+      nansenAttestedAt: undefined,
     });
     context.VaultRef.set({ id: vaultKey(event.params.vault), agent: id });
   },
