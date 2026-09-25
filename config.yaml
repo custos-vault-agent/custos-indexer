@@ -51,13 +51,15 @@ chains:
     - "0x2222222222222222222222222222222222222222"
   - name: AgentVault # registered dynamically from AgentRegistered
 
-# Monad mainnet
+# Monad mainnet. Addresses from custos-contract/deployments/monad.json; the start
+# block is the deployment block of CustosCore, so nothing earlier is scanned.
 - id: 143
-  start_block: 105900000
+  start_block: 107876400
   contracts:
   - name: CustosCore
-    # TODO: fill from deployments/monad-mainnet.json after `make deployCore`
-    address: []
+    address:
+    - "0x8809926996F45505F17599fda8299d86bA3586af"
   - name: NanSigil
-    address: []
-  - name: AgentVault
+    address:
+    - "0x1421E6Acc7C7b3199077CD3b2A7d2A33778dfe9D"
+  - name: AgentVault # registered dynamically from AgentRegistered
