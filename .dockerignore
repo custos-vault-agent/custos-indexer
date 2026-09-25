@@ -1,0 +1,9 @@
+node_modules
+.envio
+generated
+.git
+.env
+.env.*
+!.env.example
+logs
+*.md
