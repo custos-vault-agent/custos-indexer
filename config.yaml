@@ -1,40 +1,46 @@
 # yaml-language-server: $schema=./node_modules/envio/evm.schema.json
 name: envio-indexer
 disable_default_cross_chain: true
-# Event/handler definitions are shared across chains; each chain lists only addresses.
+# Event and handler definitions are shared across chains; each chain lists only
+# addresses. Each contract names its events and reads their signatures from the
+# ABI that `make abi` generates in the contract repo, so a signature cannot drift
+# from the deployed contract without codegen failing here.
 contracts:
 - name: CustosCore
+  abi_file_path: abis/CustosCore.json
   events:
-  - event: AgentAllowanceChanged(bytes32 indexed id, uint128 oldAllowance, uint128 newAllowance)
-  - event: AgentPeriodChanged(bytes32 indexed id, uint32 oldPeriodLength, uint32 newPeriodLength)
-  - event: AgentPublicChanged(bytes32 indexed id, bool isPublic)
-  - event: AgentRegistered(bytes32 indexed id, address indexed creator, address indexed wallet, address vault, bytes32 name, string description, uint128 allowance, uint32 periodLength, uint16 feeRate, bool isPublic)
-  - event: AgentStatusChanged(bytes32 indexed id, uint8 oldStatus, uint8 newStatus)
-  - event: Initialized(uint64 version)
-  - event: MarketAdapterChanged(address indexed oldAdapter, address indexed newAdapter)
-  - event: MarketAllowedChanged(address indexed market, bool allowed)
-  - event: MinSeedChanged(uint128 oldMinSeed, uint128 newMinSeed)
-  - event: PausedChanged(bool paused)
-  - event: Upgraded(address indexed implementation)
+  - event: AgentAllowanceChanged
+  - event: AgentPeriodChanged
+  - event: AgentPublicChanged
+  - event: AgentRegistered
+  - event: AgentStatusChanged
+  - event: Initialized
+  - event: MarketAdapterChanged
+  - event: MarketAllowedChanged
+  - event: MinSeedChanged
+  - event: PausedChanged
+  - event: Upgraded
 # NanSigil (repo nansigil-contract): wallet-keyed reputation attestations.
 - name: NanSigil
+  abi_file_path: abis/NanSigil.json
   events:
-  - event: AttestorChanged(address indexed oldAttestor, address indexed newAttestor)
-  - event: AttestationSubmitted(address indexed wallet, string label, int256 pnl, uint16 winRate, uint64 timestamp, bytes32 attestHash)
-  - event: Upgraded(address indexed implementation)
+  - event: AttestorChanged
+  - event: AttestationSubmitted
+  - event: Upgraded
 - name: AgentVault
   # No fixed address — one AgentVault is deployed per agent via
   # CustosCore.registerAgent, so there's no single address to list. Instances
   # are registered dynamically from CustosCore's AgentRegistered event; see
   # the indexer.contractRegister call in src/handlers/CustosCore.ts.
+  abi_file_path: abis/AgentVault.json
   events:
-  - event: SwapExecuted(address indexed vault, bytes32 indexed agentId, address indexed market, bool isBuy, uint128 baseAmount, uint128 quoteAmount, uint128 notionalCharged, uint256 newTotalAssets, uint256 newSharePrice)
-  - event: SubscriberDeposited(address indexed vault, address indexed subscriber, uint256 assets, uint256 shares)
-  - event: SubscriberRedeemed(address indexed vault, address indexed subscriber, uint256 assets, uint256 shares)
-  - event: SeedDeposited(address indexed vault, address indexed creator, uint256 assets, uint256 shares, address deadAddress)
-  - event: FeeMinted(address indexed vault, address indexed creator, uint256 feeShares, uint256 feeAssets, uint256 newHighWaterMark)
-  - event: CircuitBreakerTriggered(address indexed vault, uint256 currentSharePrice, uint256 highWaterMark, uint16 maxDrawdownBps)
-  - event: Transfer(address indexed from, address indexed to, uint256 value)
+  - event: SwapExecuted
+  - event: SubscriberDeposited
+  - event: SubscriberRedeemed
+  - event: SeedDeposited
+  - event: FeeMinted
+  - event: CircuitBreakerTriggered
+  - event: Transfer
 
 chains:
 # Monad testnet
