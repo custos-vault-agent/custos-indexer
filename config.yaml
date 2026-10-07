@@ -43,18 +43,16 @@ contracts:
   - event: Transfer
 
 chains:
-# Monad testnet
+# Monad testnet. Addresses from custos-contract/deployments/monad-testnet.json.
 - id: 10143
-  start_block: 0
+  start_block: 69086038
   contracts:
   - name: CustosCore
     address:
-    - "0xCfBbd07b107A6cb7e685e555E4C9ef956d11a0bB"
+    - "0xd39e810EAE02E8247ec9308c936c5077dBAe2c46"
   - name: NanSigil
-    # TODO: placeholder until NanSigil is deployed on testnet; replace with .nansigil
-    # from deployments/*.json. Also what test/derived.test.ts simulates against.
     address:
-    - "0x2222222222222222222222222222222222222222"
+    - "0xfF86D1b2fd3edaD27B361A9d004f3b6facb43621"
   - name: AgentVault # registered dynamically from AgentRegistered
 
 # Monad mainnet. Addresses from custos-contract/deployments/monad.json; the start

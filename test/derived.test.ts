@@ -1,9 +1,11 @@
 import { createTestIndexer } from "envio";
 import { describe, expect, it, test } from "vitest";
 
-const CORE = "0xCfBbd07b107A6cb7e685e555E4C9ef956d11a0bB" as const;
+const CORE = "0xd39e810EAE02E8247ec9308c936c5077dBAe2c46" as const;
 const VAULT = "0x1111111111111111111111111111111111111111";
 const AGENT_ID = "0x" + "ab".repeat(32);
+// Simulated blocks must sit above the chain start_block or simulate drops the event.
+const FIRST_BLOCK = 69_086_040;
 const ONE = 10n ** 18n;
 const hex = (byte: string, n: number) => `0x${byte.repeat(n)}` as const;
 const CREATOR = hex("c1", 20);
@@ -19,7 +21,7 @@ describe("derived Agent / SharePricePoint", () => {
               contract: "CustosCore",
               event: "AgentRegistered",
               srcAddress: CORE,
-              block: { number: 1, timestamp: 1000 },
+              block: { number: FIRST_BLOCK, timestamp: 1000 },
               params: {
                 id: AGENT_ID,
                 creator: CREATOR,
@@ -37,14 +39,14 @@ describe("derived Agent / SharePricePoint", () => {
               contract: "AgentVault",
               event: "SeedDeposited",
               srcAddress: VAULT,
-              block: { number: 1, timestamp: 1000 },
+              block: { number: FIRST_BLOCK, timestamp: 1000 },
               params: { vault: VAULT, creator: CREATOR, assets: 1_000_000_000n, shares: 1_000_000_000n, deadAddress: `0x${"00".repeat(19)}01` },
             },
             {
               contract: "AgentVault",
               event: "SwapExecuted",
               srcAddress: VAULT,
-              block: { number: 2, timestamp: 2000 },
+              block: { number: FIRST_BLOCK + 1, timestamp: 2000 },
               params: {
                 vault: VAULT,
                 agentId: AGENT_ID,
@@ -61,14 +63,14 @@ describe("derived Agent / SharePricePoint", () => {
               contract: "AgentVault",
               event: "CircuitBreakerTriggered",
               srcAddress: VAULT,
-              block: { number: 3, timestamp: 3000 },
+              block: { number: FIRST_BLOCK + 2, timestamp: 3000 },
               params: { vault: VAULT, currentSharePrice: (ONE * 8n) / 10n, highWaterMark: (ONE * 11n) / 10n, maxDrawdownBps: 2000n },
             },
             {
               contract: "CustosCore",
               event: "AgentStatusChanged",
               srcAddress: CORE,
-              block: { number: 4, timestamp: 4000 },
+              block: { number: FIRST_BLOCK + 3, timestamp: 4000 },
               params: { id: AGENT_ID, oldStatus: 2n, newStatus: 1n },
             },
           ],
@@ -92,14 +94,14 @@ describe("derived Agent / SharePricePoint", () => {
 });
 
 describe("NanSigil attestation → Agent", () => {
-  const SIGIL = "0x2222222222222222222222222222222222222222" as const;
+  const SIGIL = "0xfF86D1b2fd3edaD27B361A9d004f3b6facb43621" as const;
   const CREATOR = hex("c1", 20);
   const register = (id: `0x${string}`, wallet: `0x${string}`, vault: `0x${string}`, block: number) =>
     ({
       contract: "CustosCore" as const,
       event: "AgentRegistered" as const,
       srcAddress: CORE,
-      block: { number: block, timestamp: block * 1000 },
+      block: { number: FIRST_BLOCK + block - 1, timestamp: block * 1000 },
       params: {
         id, creator: CREATOR, wallet, vault, name: hex("00", 32), description: "",
         allowance: 1n, periodLength: 0n, feeRate: 0n, isPublic: true,
@@ -118,7 +120,7 @@ describe("NanSigil attestation → Agent", () => {
               contract: "NanSigil",
               event: "AttestationSubmitted",
               srcAddress: SIGIL,
-              block: { number: 2, timestamp: 2000 },
+              block: { number: FIRST_BLOCK + 1, timestamp: 2000 },
               params: { wallet: CREATOR, label: "Fund", pnl: 90_000n, winRate: 65n, timestamp: 1999n, attestHash: hex("ff", 32) },
             },
             register(B, hex("b1", 20), hex("12", 20), 3), // same creator, registered after the attestation
