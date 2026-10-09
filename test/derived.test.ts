@@ -313,4 +313,25 @@ describe("market flow, markets and lifetime asset counters", () => {
     const b = applyFlow(undefined, "id", "0xAB", 3601, false, 5n);
     expect(b).toMatchObject({ market: "0xab", timestamp: 3600, buyNotional: 0n, sellNotional: 5n, swapCount: 1 });
   });
+
+  it("YieldSource follows allow, revoke and re-allow on one row", async () => {
+    const ti = createTestIndexer();
+    const YS = "0xAbCdEf0000000000000000000000000000000001" as const;
+    const change = (n: number, ts: number, allowed: boolean) => ({
+      contract: "CustosCore" as const, event: "YieldSourceAllowedChanged" as const, srcAddress: CORE,
+      block: { number: FIRST_BLOCK + n, timestamp: ts },
+      params: { yieldSource: YS, allowed },
+    });
+    const run = (n: number, ts: number, allowed: boolean) =>
+      ti.process({ chains: { 10143: { simulate: [change(n, ts, allowed)] } } });
+    const id = YS.toLowerCase();
+
+    await run(0, 100, true);
+    expect(await ti.YieldSource.getOrThrow(id)).toMatchObject({ allowed: true, updatedAt: 100 });
+    await run(1, 200, false);
+    expect(await ti.YieldSource.getOrThrow(id)).toMatchObject({ allowed: false, updatedAt: 200 });
+    await run(2, 300, true);
+    expect(await ti.YieldSource.getOrThrow(id)).toMatchObject({ allowed: true, updatedAt: 300 });
+    expect(await ti.YieldSource.getAll()).toHaveLength(1);
+  });
 });

@@ -15,6 +15,7 @@ import type {
   CustosCore_MinSeedChanged,
   CustosCore_PausedChanged,
   CustosCore_Upgraded,
+  CustosCore_YieldSourceAllowedChanged,
 } from "envio";
 
 indexer.onEvent(
@@ -230,3 +231,24 @@ indexer.onEvent({ contract: "CustosCore", event: "Upgraded" }, async ({ event, c
 
   context.CustosCore_Upgraded.set(entity);
 });
+
+indexer.onEvent(
+  { contract: "CustosCore", event: "YieldSourceAllowedChanged", fields: { block: ["timestamp"] } },
+  async ({ event, context }) => {
+    const entity: CustosCore_YieldSourceAllowedChanged = {
+      id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+      blockNumber: event.block.number,
+      logIndex: event.logIndex,
+      timestamp: event.block.timestamp,
+      yieldSource: event.params.yieldSource,
+      allowed: event.params.allowed,
+    };
+
+    context.CustosCore_YieldSourceAllowedChanged.set(entity);
+    context.YieldSource.set({
+      id: event.params.yieldSource.toLowerCase(),
+      allowed: event.params.allowed,
+      updatedAt: event.block.timestamp,
+    });
+  },
+);

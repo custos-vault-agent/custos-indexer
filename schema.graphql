@@ -54,6 +54,15 @@ type CustosCore_AgentStatusChanged {
   newStatus: BigInt!
 }
 
+type CustosCore_YieldSourceAllowedChanged {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  yieldSource: String!
+  allowed: Boolean!
+}
+
 type CustosCore_Initialized {
   id: ID!
   version: BigInt!
@@ -331,4 +340,12 @@ type MarketFlowBucket {
   buyNotional: BigInt!
   sellNotional: BigInt!
   swapCount: Int!
+}
+
+# allowedYieldSources is a mapping and cannot be enumerated on chain, so this
+# replay of YieldSourceAllowedChanged is the list. id = yield source address (lowercased).
+type YieldSource {
+  id: ID!
+  allowed: Boolean!
+  updatedAt: Int!
 }

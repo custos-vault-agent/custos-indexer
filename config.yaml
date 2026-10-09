@@ -20,6 +20,7 @@ contracts:
   - event: MinSeedChanged
   - event: PausedChanged
   - event: Upgraded
+  - event: YieldSourceAllowedChanged
 # NanSigil (repo nansigil-contract): wallet-keyed reputation attestations.
 - name: NanSigil
   abi_file_path: abis/NanSigil.json

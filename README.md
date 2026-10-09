@@ -33,7 +33,7 @@ Raw entities, one per event, are the audit log:
 
 | Contract | Events |
 |---|---|
-| `CustosCore` | `AgentAllowanceChanged`, `AgentPeriodChanged`, `AgentPublicChanged`, `AgentRegistered`, `AgentStatusChanged`, `Initialized`, `MarketAdapterChanged`, `MarketAllowedChanged`, `MinSeedChanged`, `PausedChanged`, `Upgraded` |
+| `CustosCore` | `AgentAllowanceChanged`, `AgentPeriodChanged`, `AgentPublicChanged`, `AgentRegistered`, `AgentStatusChanged`, `Initialized`, `MarketAdapterChanged`, `MarketAllowedChanged`, `MinSeedChanged`, `PausedChanged`, `Upgraded`, `YieldSourceAllowedChanged` |
 | `NanSigil` | `AttestorChanged`, `AttestationSubmitted`, `Upgraded` |
 | `AgentVault` | `SwapExecuted`, `SubscriberDeposited`, `SubscriberRedeemed`, `SeedDeposited`, `FeeMinted`, `CircuitBreakerTriggered`, `Transfer`, `YieldPushed`, `YieldPulled` |
 
@@ -49,6 +49,7 @@ Derived entities are what the marketplace reads:
 | `Market` | One row per market the vaults swapped on: base token address, symbol and decimals |
 | `AgentSnapshot` | One row per agent per hour: share price, total assets, subscriber count |
 | `MarketFlowBucket` | One row per market per hour: USDC bought, USDC sold and swap count across all agents. Readers sum buckets for 24h and 7d windows |
+| `YieldSource` | One row per yield source address, last write wins: whether `CustosCore` currently allows it. The on-chain mapping cannot be enumerated, so this replay of `YieldSourceAllowedChanged` is the list |
 | `VaultRef` | Maps a vault address to its agent, because vault events carry only the vault address |
 
 ## Block handler, effects and RPC
