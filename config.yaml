@@ -41,6 +41,8 @@ contracts:
   - event: FeeMinted
   - event: CircuitBreakerTriggered
   - event: Transfer
+  - event: YieldPushed
+  - event: YieldPulled
 
 chains:
 # Monad testnet. Addresses from custos-contract/deployments/monad-testnet.json.

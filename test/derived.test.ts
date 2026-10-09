@@ -1,5 +1,11 @@
 import { createTestIndexer } from "envio";
 import { describe, expect, it, test } from "vitest";
+import { SEED_HOLDER, ZERO_ADDRESS, applyDeposit, applyRedeem, applySwap, applyYield, shareBalance, subscriberDelta, type CostBasis } from "../src/handlers/derived";
+
+// Keep token-metadata lookups off the network: the simulated market address
+// does not exist, and a real RPC call would make these tests slow and flaky.
+process.env.RPC_URL_10143 = "http://127.0.0.1:1";
+process.env.RPC_URL_143 = "http://127.0.0.1:1";
 
 const CORE = "0xd39e810EAE02E8247ec9308c936c5077dBAe2c46" as const;
 const VAULT = "0x1111111111111111111111111111111111111111";
@@ -84,6 +90,7 @@ describe("derived Agent / SharePricePoint", () => {
     expect(agent.swapCount).toBe(1);
     expect(agent.volume).toBe(100_000_000n);
     expect(agent.sharePrice).toBe((ONE * 8n) / 10n); // last observation = breaker
+    expect([agent.totalAssets, agent.baseBalance, agent.baseCostBasis]).toEqual([1_100_000_000n, 50n * ONE, 100_000_000n]);
     expect(agent.status).toBe(1); // resumed after the breaker set 2
 
     const points = (await ti.SharePricePoint.getWhere({ agent: { _eq: AGENT_ID.toLowerCase() } }))
@@ -132,5 +139,44 @@ describe("NanSigil attestation → Agent", () => {
     const b = await ti.Agent.getOrThrow(B.toLowerCase());
     expect([a.nansenLabel, a.nansenWinRate, a.nansenAttestedAt]).toEqual(["Fund", 65, 1999]);
     expect([b.nansenLabel, b.nansenPnl]).toEqual(["Fund", 90_000n]);
+  });
+});
+
+describe("pure derived helpers", () => {
+  const zero: CostBasis = { realizedPnl: 0n, closedCount: 0, winCount: 0, baseBalance: 0n, baseCostBasis: 0n };
+
+  it("tracks weighted-average cost basis over buy, partial sell, losing sell", () => {
+    let s = applySwap(zero, true, 100n, 1000n)!;
+    s = applySwap(s, true, 100n, 1400n)!; // balance 200, cost 2400
+    expect([s.baseBalance, s.baseCostBasis]).toEqual([200n, 2400n]);
+
+    s = applySwap(s, false, 50n, 900n)!; // cost 600, pnl +300
+    expect(s).toMatchObject({ realizedPnl: 300n, closedCount: 1, winCount: 1, baseBalance: 150n, baseCostBasis: 1800n });
+
+    s = applySwap(s, false, 150n, 1000n)!; // cost 1800, pnl -800
+    expect(s).toMatchObject({ realizedPnl: -500n, closedCount: 2, winCount: 1, baseBalance: 0n, baseCostBasis: 0n });
+  });
+
+  it("ignores a sell with no tracked balance", () => {
+    expect(applySwap(zero, false, 10n, 10n)).toBeUndefined();
+  });
+
+  it("crosses subscriberCount at zero in both directions and ignores address(1)", () => {
+    const user = hex("d1", 20);
+    expect(subscriberDelta(user, 0n, 5n)).toBe(1);
+    expect(subscriberDelta(user, 5n, 7n)).toBe(0);
+    expect(subscriberDelta(user, 7n, 0n)).toBe(-1);
+    expect(subscriberDelta(SEED_HOLDER, 0n, 5n)).toBe(0);
+    expect(subscriberDelta(ZERO_ADDRESS, 0n, 5n)).toBe(0);
+  });
+
+  it("accumulates assets in/out and floors totalAssets, yield and shares at zero", () => {
+    expect(applyDeposit(applyDeposit(0n, 100n), 50n)).toBe(150n);
+    expect(applyRedeem(150n, 40n)).toBe(110n);
+    expect(applyRedeem(10n, 40n)).toBe(0n);
+    expect(applyYield(applyYield(0n, 80n, true), 30n, false)).toBe(50n);
+    expect(applyYield(10n, 30n, false)).toBe(0n);
+    expect(shareBalance(5n, -9n)).toBe(0n);
+    expect(shareBalance(5n, 3n)).toBe(8n);
   });
 });

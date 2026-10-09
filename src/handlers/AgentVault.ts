@@ -6,7 +6,11 @@
  * indexer.contractRegister call in CustosCore.ts.
  */
 import { indexer } from "envio";
-import { ONE, agentByVault, agentKey, recordPrice } from "./derived";
+import {
+  ONE, ZERO_ADDRESS, agentByVault, agentKey, applyDeposit, applyRedeem, applySwap, applyYield,
+  recordPrice, shareBalance, subscriberDelta, updatePosition,
+} from "./derived";
+import { marketBase, tokenMeta } from "./effects";
 import type {
   AgentVault_CircuitBreakerTriggered,
   AgentVault_FeeMinted,
@@ -15,6 +19,8 @@ import type {
   AgentVault_SubscriberRedeemed,
   AgentVault_SwapExecuted,
   AgentVault_Transfer,
+  AgentVault_YieldPulled,
+  AgentVault_YieldPushed,
 } from "envio";
 
 indexer.onEvent(
@@ -48,11 +54,25 @@ indexer.onEvent(
         notional: event.params.notionalCharged,
         source: "swap",
       });
+      const { isBuy, baseAmount, quoteAmount } = event.params;
+      const basis = applySwap(agent, isBuy, baseAmount, quoteAmount);
+      if (!basis) context.log.warn(`sell with no tracked base balance on ${agent.id}; cost basis skipped`);
       context.Agent.set({
         ...updated,
+        ...basis,
+        totalAssets: event.params.newTotalAssets,
         swapCount: agent.swapCount + 1,
         volume: agent.volume + event.params.notionalCharged,
       });
+    }
+
+    const marketId = event.params.market.toLowerCase();
+    if (!(await context.Market.get(marketId))) {
+      const baseToken = await context.effect(marketBase, marketId);
+      if (baseToken) {
+        const meta = await context.effect(tokenMeta, baseToken);
+        context.Market.set({ id: marketId, baseToken: baseToken.toLowerCase(), baseSymbol: meta.symbol, baseDecimals: meta.decimals });
+      }
     }
   },
 );
@@ -72,6 +92,14 @@ indexer.onEvent(
     };
 
     context.AgentVault_SubscriberDeposited.set(entity);
+
+    const agent = await agentByVault(context, event.params.vault);
+    if (agent) {
+      await updatePosition(context, agent, event.params.subscriber, event.block.timestamp, (p) => ({
+        assetsIn: p.assetsIn + event.params.assets,
+      }));
+      context.Agent.set({ ...agent, totalAssets: applyDeposit(agent.totalAssets, event.params.assets) });
+    }
   },
 );
 
@@ -90,6 +118,14 @@ indexer.onEvent(
     };
 
     context.AgentVault_SubscriberRedeemed.set(entity);
+
+    const agent = await agentByVault(context, event.params.vault);
+    if (agent) {
+      await updatePosition(context, agent, event.params.subscriber, event.block.timestamp, (p) => ({
+        assetsOut: p.assetsOut + event.params.assets,
+      }));
+      context.Agent.set({ ...agent, totalAssets: applyRedeem(agent.totalAssets, event.params.assets) });
+    }
   },
 );
 
@@ -112,8 +148,11 @@ indexer.onEvent(
 
     const agent = await agentByVault(context, event.params.vault);
     if (agent) {
-      context.Agent.set(
-        recordPrice(context, agent, {
+      await updatePosition(context, agent, event.params.deadAddress, event.block.timestamp, (p) => ({
+        assetsIn: p.assetsIn + event.params.assets,
+      }));
+      context.Agent.set({
+        ...recordPrice(context, agent, {
           id: entity.id,
           timestamp: event.block.timestamp,
           sharePrice: ONE,
@@ -121,7 +160,8 @@ indexer.onEvent(
           notional: 0n,
           source: "seed",
         }),
-      );
+        totalAssets: applyDeposit(agent.totalAssets, event.params.assets),
+      });
     }
   },
 );
@@ -187,11 +227,47 @@ indexer.onEvent(
       blockNumber: event.block.number,
       logIndex: event.logIndex,
       timestamp: event.block.timestamp,
+      vault: event.srcAddress,
       from: event.params.from,
       to: event.params.to,
       value: event.params.value,
     };
 
     context.AgentVault_Transfer.set(entity);
+
+    const agent = await agentByVault(context, event.srcAddress);
+    if (!agent) return;
+    const { from, to, value } = event.params;
+    let count = agent.subscriberCount;
+    for (const [holder, delta] of [[from, -value], [to, value]] as const) {
+      if (holder.toLowerCase() === ZERO_ADDRESS) continue;
+      const { before, after } = await updatePosition(context, agent, holder, event.block.timestamp, (p) => ({
+        shares: shareBalance(p.shares, delta),
+      }));
+      count = Math.max(0, count + subscriberDelta(holder, before.shares, after.shares));
+    }
+    if (count !== agent.subscriberCount) context.Agent.set({ ...agent, subscriberCount: count });
   },
 );
+
+for (const [name, pushed] of [["YieldPushed", true], ["YieldPulled", false]] as const) {
+  indexer.onEvent(
+    { contract: "AgentVault", event: name, fields: { block: ["timestamp"] } },
+    async ({ event, context }) => {
+      const entity: AgentVault_YieldPushed | AgentVault_YieldPulled = {
+        id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+        blockNumber: event.block.number,
+        logIndex: event.logIndex,
+        timestamp: event.block.timestamp,
+        vault: event.params.vault,
+        amount: event.params.amount,
+      };
+      context[`AgentVault_${name}`].set(entity);
+
+      const agent = await agentByVault(context, event.params.vault);
+      if (agent) {
+        context.Agent.set({ ...agent, yieldDeployed: applyYield(agent.yieldDeployed, event.params.amount, pushed) });
+      }
+    },
+  );
+}

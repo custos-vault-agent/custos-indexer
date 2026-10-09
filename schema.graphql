@@ -186,9 +186,28 @@ type AgentVault_Transfer {
   blockNumber: Int!
   logIndex: Int!
   timestamp: Int!
+  vault: String!
   from: String!
   to: String!
   value: BigInt!
+}
+
+type AgentVault_YieldPushed {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  vault: String!
+  amount: BigInt!
+}
+
+type AgentVault_YieldPulled {
+  id: ID!
+  blockNumber: Int!
+  logIndex: Int!
+  timestamp: Int!
+  vault: String!
+  amount: BigInt!
 }
 
 
@@ -213,7 +232,16 @@ type Agent {
   # Mirrors Types.Status: 1 Active, 2 Paused, 3 Revoked. CircuitBreakerTriggered
   # sets 2 without a registry event, so this is the union of both sources.
   status: Int!
-  registeredAt: Int!
+  registeredAt: Int! @index
+  # Event-derived running totals; see src/handlers/AgentVault.ts.
+  totalAssets: BigInt!
+  subscriberCount: Int!
+  yieldDeployed: BigInt!
+  realizedPnl: BigInt!
+  closedCount: Int!
+  winCount: Int!
+  baseBalance: BigInt!
+  baseCostBasis: BigInt!
   # Last observed share price, 1e18-scaled, and when.
   sharePrice: BigInt!
   lastPriceAt: Int!
@@ -246,4 +274,36 @@ type SharePricePoint {
 type VaultRef {
   id: ID!
   agent: String!
+}
+
+# id = `${vault}_${holder}`, both lowercased. shares follows the vault's ERC-20
+# Transfer events; assetsIn/assetsOut sum deposits and redemptions.
+type VaultPosition {
+  id: ID!
+  vault: String! @index
+  agent: String! @index
+  holder: String! @index
+  shares: BigInt!
+  assetsIn: BigInt!
+  assetsOut: BigInt!
+  firstSeenAt: Int!
+  lastActivityAt: Int!
+}
+
+# id = market address (lowercased).
+type Market {
+  id: ID!
+  baseToken: String!
+  baseSymbol: String!
+  baseDecimals: Int!
+}
+
+# id = `${chainId}_${agent}_${hourStart}`.
+type AgentSnapshot {
+  id: ID!
+  agent: String! @index
+  timestamp: Int!
+  sharePrice: BigInt!
+  totalAssets: BigInt!
+  subscriberCount: Int!
 }
