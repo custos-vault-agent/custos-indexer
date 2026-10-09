@@ -335,3 +335,47 @@ describe("market flow, markets and lifetime asset counters", () => {
     expect(await ti.YieldSource.getAll()).toHaveLength(1);
   });
 });
+
+describe("seed burns", () => {
+  const VAULT = "0x3333333333333333333333333333333333333333" as const;
+
+  it("accumulates burned seed shares on the agent and keeps each burn", async () => {
+    const ti = createTestIndexer();
+    await ti.process({
+      chains: {
+        10143: {
+          simulate: [
+            {
+              contract: "CustosCore", event: "AgentRegistered", srcAddress: CORE,
+              block: { number: FIRST_BLOCK, timestamp: 1000 },
+              params: {
+                id: AGENT_ID, creator: CREATOR, wallet: hex("b1", 20), vault: VAULT, name: hex("00", 32),
+                description: "", allowance: 1n, periodLength: 0n, feeRate: 0n, isPublic: true,
+              },
+            },
+            {
+              contract: "AgentVault", event: "SeedBurned", srcAddress: VAULT,
+              block: { number: FIRST_BLOCK + 1, timestamp: 2000 },
+              params: { vault: VAULT, creator: CREATOR, shares: 400n },
+            },
+            {
+              contract: "AgentVault", event: "SeedBurned", srcAddress: VAULT,
+              block: { number: FIRST_BLOCK + 2, timestamp: 3000 },
+              params: { vault: VAULT, creator: CREATOR, shares: 250n },
+            },
+            {
+              contract: "AgentVault", event: "SeedReleased", srcAddress: VAULT,
+              block: { number: FIRST_BLOCK + 3, timestamp: 4000 },
+              params: { vault: VAULT, creator: CREATOR, shares: 350n },
+            },
+          ],
+        },
+      },
+    });
+
+    const agent = await ti.Agent.getOrThrow(AGENT_ID.toLowerCase());
+    expect(agent.seedBurned).toBe(650n);
+    expect((await ti.AgentVault_SeedBurned.getAll()).length).toBe(2);
+    expect((await ti.AgentVault_SeedReleased.getAll()).length).toBe(1);
+  });
+});

@@ -14,7 +14,9 @@ import { marketBase, tokenMeta } from "./effects";
 import type {
   AgentVault_CircuitBreakerTriggered,
   AgentVault_FeeMinted,
+  AgentVault_SeedBurned,
   AgentVault_SeedDeposited,
+  AgentVault_SeedReleased,
   AgentVault_SubscriberDeposited,
   AgentVault_SubscriberRedeemed,
   AgentVault_SwapExecuted,
@@ -180,6 +182,43 @@ indexer.onEvent(
         assetsInTotal: agent.assetsInTotal + event.params.assets,
       });
     }
+  },
+);
+
+indexer.onEvent(
+  { contract: "AgentVault", event: "SeedBurned", fields: { block: ["timestamp"] } },
+  async ({ event, context }) => {
+    const entity: AgentVault_SeedBurned = {
+      id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+      blockNumber: event.block.number,
+      logIndex: event.logIndex,
+      timestamp: event.block.timestamp,
+      vault: event.params.vault,
+      creator: event.params.creator,
+      shares: event.params.shares,
+    };
+
+    context.AgentVault_SeedBurned.set(entity);
+
+    const agent = await agentByVault(context, event.params.vault);
+    if (agent) context.Agent.set({ ...agent, seedBurned: agent.seedBurned + event.params.shares });
+  },
+);
+
+indexer.onEvent(
+  { contract: "AgentVault", event: "SeedReleased", fields: { block: ["timestamp"] } },
+  async ({ event, context }) => {
+    const entity: AgentVault_SeedReleased = {
+      id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+      blockNumber: event.block.number,
+      logIndex: event.logIndex,
+      timestamp: event.block.timestamp,
+      vault: event.params.vault,
+      creator: event.params.creator,
+      shares: event.params.shares,
+    };
+
+    context.AgentVault_SeedReleased.set(entity);
   },
 );
 

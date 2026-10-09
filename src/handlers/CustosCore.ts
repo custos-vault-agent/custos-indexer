@@ -147,6 +147,7 @@ indexer.onEvent(
       assetsInTotal: 0n,
       assetsOutTotal: 0n,
       markets: [],
+      seedBurned: 0n,
       nansenLabel: attested?.label,
       nansenPnl: attested?.pnl,
       nansenWinRate: attested?.winRate,

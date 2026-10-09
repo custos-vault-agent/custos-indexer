@@ -35,7 +35,7 @@ Raw entities, one per event, are the audit log:
 |---|---|
 | `CustosCore` | `AgentAllowanceChanged`, `AgentMarketChanged`, `AgentPeriodChanged`, `AgentPublicChanged`, `AgentRegistered`, `AgentStatusChanged`, `CuratedMarketChanged`, `Initialized`, `MarketAdapterChanged`, `MinSeedChanged`, `PausedChanged`, `Upgraded`, `YieldSourceAllowedChanged` |
 | `NanSigil` | `AttestorChanged`, `AttestationSubmitted`, `Upgraded` |
-| `AgentVault` | `SwapExecuted`, `SubscriberDeposited`, `SubscriberRedeemed`, `SeedDeposited`, `FeeMinted`, `CircuitBreakerTriggered`, `Transfer`, `YieldPushed`, `YieldPulled` |
+| `AgentVault` | `SwapExecuted`, `SubscriberDeposited`, `SubscriberRedeemed`, `SeedDeposited`, `SeedBurned`, `SeedReleased`, `FeeMinted`, `CircuitBreakerTriggered`, `Transfer`, `YieldPushed`, `YieldPulled` |
 
 Each raw entity is named `Contract_Event`, for example `AgentVault_SwapExecuted`.
 

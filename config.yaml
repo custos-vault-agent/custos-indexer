@@ -40,6 +40,8 @@ contracts:
   - event: SubscriberDeposited
   - event: SubscriberRedeemed
   - event: SeedDeposited
+  - event: SeedBurned
+  - event: SeedReleased
   - event: FeeMinted
   - event: CircuitBreakerTriggered
   - event: Transfer
