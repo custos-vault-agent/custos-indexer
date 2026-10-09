@@ -1,6 +1,6 @@
 import { createTestIndexer } from "envio";
 import { describe, expect, it, test } from "vitest";
-import { SEED_HOLDER, ZERO_ADDRESS, addMarket, applyDeposit, applyFlow, applyRedeem, applySwap, applyYield, shareBalance, subscriberDelta, type CostBasis } from "../src/handlers/derived";
+import { SEED_HOLDER, ZERO_ADDRESS, addMarket, applyDeposit, applyFlow, applyRedeem, applySwap, applyYield, bumpHour, shareBalance, subscriberDelta, type CostBasis } from "../src/handlers/derived";
 
 // Keep token-metadata lookups off the network: the simulated market address
 // does not exist, and a real RPC call would make these tests slow and flaky.
@@ -92,6 +92,7 @@ describe("derived Agent / SharePricePoint", () => {
     expect(agent.sharePrice).toBe((ONE * 8n) / 10n); // last observation = breaker
     expect([agent.totalAssets, agent.baseBalance, agent.baseCostBasis]).toEqual([1_100_000_000n, 50n * ONE, 100_000_000n]);
     expect(agent.status).toBe(1); // resumed after the breaker set 2
+    expect(agent.breakerCount).toBe(1);
 
     const points = (await ti.SharePricePoint.getWhere({ agent: { _eq: AGENT_ID.toLowerCase() } }))
       .sort((a, b) => a.timestamp - b.timestamp);
@@ -143,22 +144,46 @@ describe("NanSigil attestation → Agent", () => {
 });
 
 describe("pure derived helpers", () => {
-  const zero: CostBasis = { realizedPnl: 0n, closedCount: 0, winCount: 0, baseBalance: 0n, baseCostBasis: 0n };
+  const zero: CostBasis = { realizedPnl: 0n, closedCount: 0, winCount: 0, baseBalance: 0n, baseCostBasis: 0n, baseTimeCost: 0n, holdSecondsTotal: 0n };
 
   it("tracks weighted-average cost basis over buy, partial sell, losing sell", () => {
-    let s = applySwap(zero, true, 100n, 1000n)!;
-    s = applySwap(s, true, 100n, 1400n)!; // balance 200, cost 2400
+    let s = applySwap(zero, true, 100n, 1000n, 0)!;
+    s = applySwap(s, true, 100n, 1400n, 0)!; // balance 200, cost 2400
     expect([s.baseBalance, s.baseCostBasis]).toEqual([200n, 2400n]);
 
-    s = applySwap(s, false, 50n, 900n)!; // cost 600, pnl +300
+    s = applySwap(s, false, 50n, 900n, 0)!; // cost 600, pnl +300
     expect(s).toMatchObject({ realizedPnl: 300n, closedCount: 1, winCount: 1, baseBalance: 150n, baseCostBasis: 1800n });
 
-    s = applySwap(s, false, 150n, 1000n)!; // cost 1800, pnl -800
+    s = applySwap(s, false, 150n, 1000n, 0)!; // cost 1800, pnl -800
     expect(s).toMatchObject({ realizedPnl: -500n, closedCount: 2, winCount: 1, baseBalance: 0n, baseCostBasis: 0n });
   });
 
   it("ignores a sell with no tracked balance", () => {
-    expect(applySwap(zero, false, 10n, 10n)).toBeUndefined();
+    expect(applySwap(zero, false, 10n, 10n, 0)).toBeUndefined();
+  });
+
+  it("accounts hold time from the weighted entry time", () => {
+    let s = applySwap(zero, true, 10n, 100n, 1000)!;
+    s = applySwap(s, false, 10n, 100n, 1600)!;
+    expect([s.holdSecondsTotal, s.baseTimeCost]).toEqual([600n, 0n]);
+
+    // entries at 1000 and 3000 average to 2000; selling half at 2500 holds 500s
+    s = applySwap(zero, true, 10n, 100n, 1000)!;
+    s = applySwap(s, true, 10n, 100n, 3000)!;
+    s = applySwap(s, false, 10n, 100n, 2500)!;
+    expect([s.holdSecondsTotal, s.baseTimeCost]).toEqual([500n, 20_000n]);
+
+    // a sell timestamped before the average entry floors at zero
+    expect(applySwap(s, false, 10n, 100n, 1500)!.holdSecondsTotal).toBe(500n);
+  });
+
+  it("bumpHour returns a fresh 24-slot array with the UTC hour incremented", () => {
+    const zeros = new Array(24).fill(0);
+    const h = bumpHour(bumpHour(zeros, 3 * 3600 + 5), 27 * 3600);
+    expect(h).toHaveLength(24);
+    expect(h[3]).toBe(2);
+    expect(h.reduce((a, b) => a + b, 0)).toBe(2);
+    expect(zeros[3]).toBe(0);
   });
 
   it("crosses subscriberCount at zero in both directions and ignores address(1)", () => {
@@ -249,6 +274,37 @@ describe("market flow, markets and lifetime asset counters", () => {
     const agent = await ti.Agent.getOrThrow(AGENT_ID.toLowerCase());
     expect(agent.markets).toEqual([a, MARKET_B.toLowerCase()]);
     expect([agent.assetsInTotal, agent.assetsOutTotal]).toEqual([1500n, 5800n]);
+  });
+
+  it("tracks buyCount, maxNotional and tradeHours even for an untracked sell", async () => {
+    const ti = createTestIndexer();
+    await ti.process({
+      chains: {
+        10143: {
+          simulate: [
+            {
+              contract: "CustosCore", event: "AgentRegistered", srcAddress: CORE,
+              block: { number: FIRST_BLOCK, timestamp: 100 },
+              params: {
+                id: AGENT_ID, creator: CREATOR, wallet: hex("a1", 20), vault: VAULT, name: hex("00", 32),
+                description: "", allowance: 1n, periodLength: 0n, feeRate: 0n, isPublic: true,
+              },
+            },
+            swap(1, 5 * 3600 + 10, MARKET_A, false, 900n), // sell with no base balance
+            swap(2, 5 * 3600 + 20, MARKET_A, true, 100n),
+            swap(3, 29 * 3600, MARKET_A, true, 300n), // next day, same hour slot
+            swap(4, 41 * 3600, MARKET_A, false, 50n), // avg entry 17h+10s
+          ],
+        },
+      },
+    });
+    const agent = await ti.Agent.getOrThrow(AGENT_ID.toLowerCase());
+    expect([agent.swapCount, agent.buyCount, agent.maxNotional]).toEqual([4, 2, 900n]);
+    expect(agent.tradeHours).toHaveLength(24);
+    expect(agent.tradeHours[5]).toBe(3);
+    expect(agent.tradeHours[17]).toBe(1);
+    expect(agent.holdSecondsTotal).toBe(24n * 3600n - 10n);
+    expect(agent.closedCount).toBe(1);
   });
 
   it("addMarket and applyFlow are pure and idempotent on repeats", () => {

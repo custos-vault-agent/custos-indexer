@@ -251,6 +251,15 @@ type Agent {
   sharePrice: BigInt!
   lastPriceAt: Int!
   swapCount: Int!
+  buyCount: Int!
+  # Largest single swap quoteAmount.
+  maxNotional: BigInt!
+  # Swap counts by UTC hour of day, always 24 long.
+  tradeHours: [Int!]!
+  # Hold-time state: weighted entry-time sum of the open balance, and total seconds held by closed sells.
+  baseTimeCost: BigInt!
+  holdSecondsTotal: BigInt!
+  breakerCount: Int!
   # Sum of notionalCharged over every swap, in USDC units.
   volume: BigInt!
   # Latest NanSigil attestation of the creator wallet (the event carries the

@@ -7,7 +7,7 @@
  */
 import { indexer } from "envio";
 import {
-  ONE, ZERO_ADDRESS, addMarket, agentByVault, applyFlow, flowBucketId, agentKey, applyDeposit, applyRedeem, applySwap, applyYield,
+  ONE, ZERO_ADDRESS, addMarket, bumpHour, agentByVault, applyFlow, flowBucketId, agentKey, applyDeposit, applyRedeem, applySwap, applyYield,
   recordPrice, shareBalance, subscriberDelta, updatePosition,
 } from "./derived";
 import { marketBase, tokenMeta } from "./effects";
@@ -55,7 +55,7 @@ indexer.onEvent(
         source: "swap",
       });
       const { isBuy, baseAmount, quoteAmount } = event.params;
-      const basis = applySwap(agent, isBuy, baseAmount, quoteAmount);
+      const basis = applySwap(agent, isBuy, baseAmount, quoteAmount, event.block.timestamp);
       if (!basis) context.log.warn(`sell with no tracked base balance on ${agent.id}; cost basis skipped`);
       context.Agent.set({
         ...updated,
@@ -63,6 +63,9 @@ indexer.onEvent(
         totalAssets: event.params.newTotalAssets,
         markets: addMarket(agent.markets, event.params.market),
         swapCount: agent.swapCount + 1,
+        buyCount: agent.buyCount + (isBuy ? 1 : 0),
+        maxNotional: quoteAmount > agent.maxNotional ? quoteAmount : agent.maxNotional,
+        tradeHours: bumpHour(agent.tradeHours, event.block.timestamp),
         volume: agent.volume + event.params.notionalCharged,
       });
     }
@@ -228,6 +231,7 @@ indexer.onEvent(
           source: "breaker",
         }),
         status: 2,
+        breakerCount: agent.breakerCount + 1,
       });
     }
   },

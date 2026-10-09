@@ -58,22 +58,34 @@ export type CostBasis = {
   winCount: number;
   baseBalance: bigint;
   baseCostBasis: bigint;
+  // Sum of baseAmount * entry timestamp over the open balance; /baseBalance gives the average entry time.
+  baseTimeCost: bigint;
+  holdSecondsTotal: bigint;
 };
 
 // Weighted-average cost basis. A sell with no known balance means earlier
 // history was missed; it is left unrecorded.
-export function applySwap(s: CostBasis, isBuy: boolean, baseAmount: bigint, quoteAmount: bigint): CostBasis | undefined {
+export function applySwap(s: CostBasis, isBuy: boolean, baseAmount: bigint, quoteAmount: bigint, timestamp: number): CostBasis | undefined {
   if (isBuy) {
-    return { ...s, baseBalance: s.baseBalance + baseAmount, baseCostBasis: s.baseCostBasis + quoteAmount };
+    return {
+      ...s,
+      baseBalance: s.baseBalance + baseAmount,
+      baseCostBasis: s.baseCostBasis + quoteAmount,
+      baseTimeCost: s.baseTimeCost + baseAmount * BigInt(timestamp),
+    };
   }
   if (s.baseBalance === 0n) return undefined;
   const cost = (s.baseCostBasis * baseAmount) / s.baseBalance;
+  const timeCost = (s.baseTimeCost * baseAmount) / s.baseBalance;
+  const held = BigInt(timestamp) - s.baseTimeCost / s.baseBalance;
   return {
     realizedPnl: s.realizedPnl + quoteAmount - cost,
     closedCount: s.closedCount + 1,
     winCount: s.winCount + (quoteAmount > cost ? 1 : 0),
     baseBalance: subtractFloor(s.baseBalance, baseAmount),
     baseCostBasis: subtractFloor(s.baseCostBasis, cost),
+    baseTimeCost: subtractFloor(s.baseTimeCost, timeCost),
+    holdSecondsTotal: s.holdSecondsTotal + (held > 0n ? held : 0n),
   };
 }
 
@@ -125,3 +137,6 @@ export const addMarket = (markets: readonly string[], market: string): string[] 
   const m = market.toLowerCase();
   return markets.includes(m) ? [...markets] : [...markets, m];
 };
+
+export const bumpHour = (hours: readonly number[], timestamp: number) =>
+  hours.map((n, i) => (i === Math.floor(timestamp / 3600) % 24 ? n + 1 : n));

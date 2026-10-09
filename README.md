@@ -43,7 +43,7 @@ Derived entities are what the marketplace reads:
 
 | Entity | Content |
 |---|---|
-| `Agent` | One row per agent: creator, vault, fee rate, status, last share price, swap count, volume, total assets, subscriber count, idle USDC in the yield source, realized P/L with closed and winning trade counts, base-token balance and cost basis, lifetime assets in and out of the vault (for the dollar-weighted return), the markets it has traded, and the latest NanSigil attestation of the creator wallet |
+| `Agent` | One row per agent: creator, vault, fee rate, status, last share price, swap count, volume, total assets, subscriber count, idle USDC in the yield source, realized P/L with closed and winning trade counts, base-token balance and cost basis, lifetime assets in and out of the vault (for the dollar-weighted return), the markets it has traded, buy count, largest swap, swaps by UTC hour, hold-time totals, circuit breaker trips, and the latest NanSigil attestation of the creator wallet |
 | `SharePricePoint` | One row per event that reports a share price, for the price history |
 | `VaultPosition` | One row per vault and holder: share balance from the vault's ERC-20 `Transfer` events, and the assets deposited and redeemed |
 | `Market` | One row per market the vaults swapped on: base token address, symbol and decimals |
