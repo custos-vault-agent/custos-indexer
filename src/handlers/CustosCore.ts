@@ -11,7 +11,8 @@ import type {
   CustosCore_AgentStatusChanged,
   CustosCore_Initialized,
   CustosCore_MarketAdapterChanged,
-  CustosCore_MarketAllowedChanged,
+  CustosCore_AgentMarketChanged,
+  CustosCore_CuratedMarketChanged,
   CustosCore_MinSeedChanged,
   CustosCore_PausedChanged,
   CustosCore_Upgraded,
@@ -194,14 +195,25 @@ indexer.onEvent({ contract: "CustosCore", event: "MarketAdapterChanged" }, async
   context.CustosCore_MarketAdapterChanged.set(entity);
 });
 
-indexer.onEvent({ contract: "CustosCore", event: "MarketAllowedChanged" }, async ({ event, context }) => {
-  const entity: CustosCore_MarketAllowedChanged = {
+indexer.onEvent({ contract: "CustosCore", event: "AgentMarketChanged" }, async ({ event, context }) => {
+  const entity: CustosCore_AgentMarketChanged = {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+    agentId: event.params.agentId,
     market: event.params.market,
     allowed: event.params.allowed,
   };
 
-  context.CustosCore_MarketAllowedChanged.set(entity);
+  context.CustosCore_AgentMarketChanged.set(entity);
+});
+
+indexer.onEvent({ contract: "CustosCore", event: "CuratedMarketChanged" }, async ({ event, context }) => {
+  const entity: CustosCore_CuratedMarketChanged = {
+    id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
+    market: event.params.market,
+    curated: event.params.curated,
+  };
+
+  context.CustosCore_CuratedMarketChanged.set(entity);
 });
 
 indexer.onEvent({ contract: "CustosCore", event: "MinSeedChanged" }, async ({ event, context }) => {

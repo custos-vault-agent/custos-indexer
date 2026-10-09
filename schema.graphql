@@ -74,10 +74,17 @@ type CustosCore_MarketAdapterChanged {
   newAdapter: String!
 }
 
-type CustosCore_MarketAllowedChanged {
+type CustosCore_AgentMarketChanged {
   id: ID!
+  agentId: String! @index
   market: String!
   allowed: Boolean!
+}
+
+type CustosCore_CuratedMarketChanged {
+  id: ID!
+  market: String! @index
+  curated: Boolean!
 }
 
 type CustosCore_MinSeedChanged {

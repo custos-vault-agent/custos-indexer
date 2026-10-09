@@ -10,13 +10,14 @@ contracts:
   abi_file_path: abis/CustosCore.json
   events:
   - event: AgentAllowanceChanged
+  - event: AgentMarketChanged
   - event: AgentPeriodChanged
   - event: AgentPublicChanged
   - event: AgentRegistered
   - event: AgentStatusChanged
+  - event: CuratedMarketChanged
   - event: Initialized
   - event: MarketAdapterChanged
-  - event: MarketAllowedChanged
   - event: MinSeedChanged
   - event: PausedChanged
   - event: Upgraded
