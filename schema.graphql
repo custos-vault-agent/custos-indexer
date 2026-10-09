@@ -242,6 +242,11 @@ type Agent {
   winCount: Int!
   baseBalance: BigInt!
   baseCostBasis: BigInt!
+  # Lifetime capital in (subscriber and seed deposits) and out (redemptions); only grow.
+  assetsInTotal: BigInt!
+  assetsOutTotal: BigInt!
+  # Distinct lowercased markets this agent has swapped on.
+  markets: [String!]!
   # Last observed share price, 1e18-scaled, and when.
   sharePrice: BigInt!
   lastPriceAt: Int!
@@ -306,4 +311,15 @@ type AgentSnapshot {
   sharePrice: BigInt!
   totalAssets: BigInt!
   subscriberCount: Int!
+}
+
+# id = `${chainId}_${market}_${hourStart}`, market lowercased. Readers sum buckets
+# for rolling windows; net flow is buyNotional - sellNotional.
+type MarketFlowBucket {
+  id: ID!
+  market: String! @index
+  timestamp: Int! @index
+  buyNotional: BigInt!
+  sellNotional: BigInt!
+  swapCount: Int!
 }

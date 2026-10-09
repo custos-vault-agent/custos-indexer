@@ -7,7 +7,7 @@
  */
 import { indexer } from "envio";
 import {
-  ONE, ZERO_ADDRESS, agentByVault, agentKey, applyDeposit, applyRedeem, applySwap, applyYield,
+  ONE, ZERO_ADDRESS, addMarket, agentByVault, applyFlow, flowBucketId, agentKey, applyDeposit, applyRedeem, applySwap, applyYield,
   recordPrice, shareBalance, subscriberDelta, updatePosition,
 } from "./derived";
 import { marketBase, tokenMeta } from "./effects";
@@ -61,12 +61,17 @@ indexer.onEvent(
         ...updated,
         ...basis,
         totalAssets: event.params.newTotalAssets,
+        markets: addMarket(agent.markets, event.params.market),
         swapCount: agent.swapCount + 1,
         volume: agent.volume + event.params.notionalCharged,
       });
     }
 
     const marketId = event.params.market.toLowerCase();
+    const bucketId = flowBucketId(event.chainId, marketId, event.block.timestamp);
+    context.MarketFlowBucket.set(
+      applyFlow(await context.MarketFlowBucket.get(bucketId), bucketId, marketId, event.block.timestamp, event.params.isBuy, event.params.quoteAmount),
+    );
     if (!(await context.Market.get(marketId))) {
       const baseToken = await context.effect(marketBase, marketId);
       if (baseToken) {
@@ -98,7 +103,11 @@ indexer.onEvent(
       await updatePosition(context, agent, event.params.subscriber, event.block.timestamp, (p) => ({
         assetsIn: p.assetsIn + event.params.assets,
       }));
-      context.Agent.set({ ...agent, totalAssets: applyDeposit(agent.totalAssets, event.params.assets) });
+      context.Agent.set({
+        ...agent,
+        totalAssets: applyDeposit(agent.totalAssets, event.params.assets),
+        assetsInTotal: agent.assetsInTotal + event.params.assets,
+      });
     }
   },
 );
@@ -124,7 +133,11 @@ indexer.onEvent(
       await updatePosition(context, agent, event.params.subscriber, event.block.timestamp, (p) => ({
         assetsOut: p.assetsOut + event.params.assets,
       }));
-      context.Agent.set({ ...agent, totalAssets: applyRedeem(agent.totalAssets, event.params.assets) });
+      context.Agent.set({
+        ...agent,
+        totalAssets: applyRedeem(agent.totalAssets, event.params.assets),
+        assetsOutTotal: agent.assetsOutTotal + event.params.assets,
+      });
     }
   },
 );
@@ -161,6 +174,7 @@ indexer.onEvent(
           source: "seed",
         }),
         totalAssets: applyDeposit(agent.totalAssets, event.params.assets),
+        assetsInTotal: agent.assetsInTotal + event.params.assets,
       });
     }
   },

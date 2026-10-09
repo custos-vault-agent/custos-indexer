@@ -1,6 +1,6 @@
 import { createTestIndexer } from "envio";
 import { describe, expect, it, test } from "vitest";
-import { SEED_HOLDER, ZERO_ADDRESS, applyDeposit, applyRedeem, applySwap, applyYield, shareBalance, subscriberDelta, type CostBasis } from "../src/handlers/derived";
+import { SEED_HOLDER, ZERO_ADDRESS, addMarket, applyDeposit, applyFlow, applyRedeem, applySwap, applyYield, shareBalance, subscriberDelta, type CostBasis } from "../src/handlers/derived";
 
 // Keep token-metadata lookups off the network: the simulated market address
 // does not exist, and a real RPC call would make these tests slow and flaky.
@@ -178,5 +178,83 @@ describe("pure derived helpers", () => {
     expect(applyYield(10n, 30n, false)).toBe(0n);
     expect(shareBalance(5n, -9n)).toBe(0n);
     expect(shareBalance(5n, 3n)).toBe(8n);
+  });
+});
+
+describe("market flow, markets and lifetime asset counters", () => {
+  const VAULT = "0x1111111111111111111111111111111111111111" as const;
+  const MARKET_A = hex("44", 20), MARKET_B = hex("55", 20);
+  const swap = (block: number, timestamp: number, market: `0x${string}`, isBuy: boolean, quote: bigint) => ({
+    contract: "AgentVault" as const,
+    event: "SwapExecuted" as const,
+    srcAddress: VAULT,
+    block: { number: FIRST_BLOCK + block, timestamp },
+    params: {
+      vault: VAULT, agentId: AGENT_ID, market, isBuy, baseAmount: 10n * ONE, quoteAmount: quote,
+      notionalCharged: quote, newTotalAssets: 1_000_000_000n, newSharePrice: ONE,
+    },
+  });
+
+  it("buckets swaps by hour, tracks distinct markets and never lowers lifetime counters", async () => {
+    const ti = createTestIndexer();
+    await ti.process({
+      chains: {
+        10143: {
+          simulate: [
+            {
+              contract: "CustosCore", event: "AgentRegistered", srcAddress: CORE,
+              block: { number: FIRST_BLOCK, timestamp: 3600 },
+              params: {
+                id: AGENT_ID, creator: CREATOR, wallet: hex("a1", 20), vault: VAULT, name: hex("00", 32),
+                description: "", allowance: 1n, periodLength: 0n, feeRate: 0n, isPublic: true,
+              },
+            },
+            {
+              contract: "AgentVault", event: "SeedDeposited", srcAddress: VAULT,
+              block: { number: FIRST_BLOCK, timestamp: 3600 },
+              params: { vault: VAULT, creator: CREATOR, assets: 1000n, shares: 1000n, deadAddress: `0x${"00".repeat(19)}01` },
+            },
+            {
+              contract: "AgentVault", event: "SubscriberDeposited", srcAddress: VAULT,
+              block: { number: FIRST_BLOCK + 1, timestamp: 3700 },
+              params: { vault: VAULT, subscriber: hex("d1", 20), assets: 500n, shares: 500n },
+            },
+            swap(2, 3800, MARKET_A, true, 100n),
+            swap(3, 3900, MARKET_A, true, 50n),
+            swap(4, 4000, MARKET_A, false, 30n),
+            swap(5, 7300, MARKET_A, true, 7n), // next hour
+            swap(6, 7400, MARKET_B, false, 9n),
+            {
+              contract: "AgentVault", event: "SubscriberRedeemed", srcAddress: VAULT,
+              block: { number: FIRST_BLOCK + 7, timestamp: 7500 },
+              params: { vault: VAULT, subscriber: hex("d1", 20), assets: 800n, shares: 400n },
+            },
+            {
+              contract: "AgentVault", event: "SubscriberRedeemed", srcAddress: VAULT,
+              block: { number: FIRST_BLOCK + 8, timestamp: 7600 },
+              params: { vault: VAULT, subscriber: hex("d1", 20), assets: 5000n, shares: 100n }, // over-redeem floors totalAssets only
+            },
+          ],
+        },
+      },
+    });
+
+    const a = MARKET_A.toLowerCase();
+    const first = await ti.MarketFlowBucket.getOrThrow(`10143_${a}_3600`);
+    expect([first.buyNotional, first.sellNotional, first.swapCount, first.timestamp]).toEqual([150n, 30n, 3, 3600]);
+    const second = await ti.MarketFlowBucket.getOrThrow(`10143_${a}_7200`);
+    expect([second.buyNotional, second.sellNotional, second.swapCount]).toEqual([7n, 0n, 1]);
+    expect((await ti.MarketFlowBucket.getOrThrow(`10143_${MARKET_B.toLowerCase()}_7200`)).sellNotional).toBe(9n);
+
+    const agent = await ti.Agent.getOrThrow(AGENT_ID.toLowerCase());
+    expect(agent.markets).toEqual([a, MARKET_B.toLowerCase()]);
+    expect([agent.assetsInTotal, agent.assetsOutTotal]).toEqual([1500n, 5800n]);
+  });
+
+  it("addMarket and applyFlow are pure and idempotent on repeats", () => {
+    expect(addMarket([], "0xAB")).toEqual(["0xab"]);
+    expect(addMarket(["0xab"], "0xAB")).toEqual(["0xab"]);
+    const b = applyFlow(undefined, "id", "0xAB", 3601, false, 5n);
+    expect(b).toMatchObject({ market: "0xab", timestamp: 3600, buyNotional: 0n, sellNotional: 5n, swapCount: 1 });
   });
 });

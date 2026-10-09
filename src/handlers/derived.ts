@@ -1,4 +1,4 @@
-import type { Agent, SharePricePoint, VaultPosition, VaultRef } from "envio";
+import type { Agent, MarketFlowBucket, SharePricePoint, VaultPosition, VaultRef } from "envio";
 
 // envio does not export its handler context type; this is the slice we use.
 type HandlerContext = {
@@ -97,3 +97,31 @@ export async function updatePosition(
   context.VaultPosition.set(after);
   return { before, after };
 }
+
+export const hourStart = (timestamp: number) => Math.floor(timestamp / 3600) * 3600;
+
+export const flowBucketId = (chainId: number, market: string, timestamp: number) =>
+  `${chainId}_${market.toLowerCase()}_${hourStart(timestamp)}`;
+
+// notionalCharged equals quoteAmount in the contract, so either is the USDC leg.
+export function applyFlow(
+  prev: MarketFlowBucket | undefined,
+  id: string,
+  market: string,
+  timestamp: number,
+  isBuy: boolean,
+  quoteAmount: bigint,
+): MarketFlowBucket {
+  const b = prev ?? { id, market: market.toLowerCase(), timestamp: hourStart(timestamp), buyNotional: 0n, sellNotional: 0n, swapCount: 0 };
+  return {
+    ...b,
+    buyNotional: b.buyNotional + (isBuy ? quoteAmount : 0n),
+    sellNotional: b.sellNotional + (isBuy ? 0n : quoteAmount),
+    swapCount: b.swapCount + 1,
+  };
+}
+
+export const addMarket = (markets: readonly string[], market: string): string[] => {
+  const m = market.toLowerCase();
+  return markets.includes(m) ? [...markets] : [...markets, m];
+};
